@@ -337,7 +337,7 @@
     </div>
 <script>
 const BASE_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTgusT-lc4tl11z_8YIgP1Vdt0R_mm95CMCEU91Ep_gskkQMTWpJTzJ44yKFl1QS5YHDL8ZO8JyGTjr/pub?output=csv&gid=";
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyFpuuH7ym2NPhO-LOVUO5dB4bdCK-o_iAMpTZdVWSITnQxx9ob_rURvdCV-iO4Q6VuPg/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxo9V0Hxf0auVVihvfhtWFxTAK3f6fcG_dOf4-CE4KIOhRP71L5AKlvXBQuJsqz_Ic5BQ/exec";
 
 let allQuestions = [], selectedQuestions = [], studentAnswers = [];
 let currentQuestionIndex = 0, timeLeft = 1200, timerInterval, isSubmitted = false, cheatCount = 0;
@@ -568,12 +568,15 @@ async function finalizeSubmission() {
     document.getElementById('result-screen').style.display = 'flex';
 
     // Gửi dữ liệu về Google Sheets
-    const formData = new URLSearchParams();
-    formData.append('maThi', document.getElementById('maThi').value.trim());
-    formData.append('name', document.getElementById('studentName').value.toUpperCase());
-    formData.append('birthDate', document.getElementById('studentDOB').value);
-    formData.append('score', score10);
-    formData.append('status', status);
+    const selectedNgheText = document.getElementById('jobType').options[document.getElementById('jobType').selectedIndex].text;
+  const formData = new URLSearchParams();
+formData.append('maThi', document.getElementById('maThi').value);
+formData.append('name', document.getElementById('studentName').value);
+formData.append('birthDate', document.getElementById('studentDOB').value);
+formData.append('score', `${correctCount}/30`);
+formData.append('status', status);
+formData.append('viPham', cheatCount);
+formData.append('ngheName', selectedNgheText);
 
     try { await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: formData }); } catch (e) {}
 
