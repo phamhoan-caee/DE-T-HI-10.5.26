@@ -282,7 +282,7 @@
             </div>
             <div style="display:flex; align-items:center; margin: 15px 0; justify-content: center; gap:10px; background: rgba(227, 242, 253, 0.8); padding: 10px; border-radius: 10px;">
                 <input type="checkbox" id="modeToggle" style="width:20px; height:20px; cursor: pointer;">
-                <label for="modeToggle" style="cursor:pointer; font-weight: 700; color: #0d47a1;">Chế độ ÔN TẬP </label>
+                <label for="modeToggle" style="cursor:pointer; font-weight: 700; color: #0d47a1;">Chế độ ÔN TẬP (Có AI đọc câu hỏi)</label>
             </div>
             <button class="btn-start" id="btnStart" onclick="validateAndStart()">VÀO THI NGAY ➔</button>
         </div>
@@ -337,7 +337,7 @@
     </div>
 <script>
 const BASE_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTgusT-lc4tl11z_8YIgP1Vdt0R_mm95CMCEU91Ep_gskkQMTWpJTzJ44yKFl1QS5YHDL8ZO8JyGTjr/pub?output=csv&gid=";
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxzzGFK5ewaPxcfzRUSNJaKOpfjDbHRW2nmQKTp6BnihFHKMeDNVTdC_yQXgTGEIjs5Lw/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyFpuuH7ym2NPhO-LOVUO5dB4bdCK-o_iAMpTZdVWSITnQxx9ob_rURvdCV-iO4Q6VuPg/exec";
 
 let allQuestions = [], selectedQuestions = [], studentAnswers = [];
 let currentQuestionIndex = 0, timeLeft = 1200, timerInterval, isSubmitted = false, cheatCount = 0;
@@ -528,52 +528,59 @@ function closeConfirmModal() { document.getElementById('confirm-modal-overlay').
 async function finalizeSubmission() {
     if (isSubmitted) return;
     isSubmitted = true;
-    clearInterval(timerInterval);
+    closeConfirmModal();
+    clearInterval(timerInterval); 
+    synth.cancel();
+    
+    document.getElementById('submitBtn').disabled = true;
+    document.getElementById('submitBtn').innerText = "ĐÃ NỘP BÀI";
 
-    const scorePercent = Math.round((correctCount / questions.length) * 100);
-    const status = correctCount >= 25 ? "ĐẠT" : "KHÔNG ĐẠT";
+    let correctCount = 0;
+    selectedQuestions.forEach((q, i) => {
+        const ans = studentAnswers.find(a => a.qIndex === i);
+        if(ans) {
+            const labels = ['A','B','C','D'];
+            const selectedLabel = labels[q.options.indexOf(ans.selected)];
+            if(selectedLabel === q.answer) correctCount++;
+        }
+    });
 
-    // Hiển thị kết quả lên màn hình
-    document.getElementById('quiz-screen').style.display = 'none';
-    document.getElementById('result-screen').style.display = 'grid';
-    document.getElementById('final-score').innerText = `${correctCount}/${questions.length}`;
-    document.getElementById('final-status').innerText = status;
-    document.getElementById('final-status').className = status === "ĐẠT" ? "status-pass" : "status-fail";
+    const score10 = parseFloat(((correctCount / 30) * 10).toFixed(1));
+    const status = score10 >= 8.3 ? "ĐẠT" : "KHÔNG ĐẠT";
 
-    // Lấy thông tin chế độ (Thi hoặc Ôn tập)
-    const modeText = isExamMode ? "" : " (ÔN TẬP)";
-    const ngheFinal = selectedNgheText + modeText; // Kết hợp để Script phân loại
+    document.getElementById('res-name').innerText = document.getElementById('studentName').value;
+    document.getElementById('res-dob').innerText = document.getElementById('studentDOB').value || "Chưa nhập";
+    document.getElementById('res-id').innerText = document.getElementById('khoaThi').value;
+    document.getElementById('res-score').innerText = correctCount;
 
-    // Gửi dữ liệu sang Google Sheets qua Apps Script
-    const formData = new FormData();
-    formData.append('maThi', document.getElementById('maThi').value);
-    formData.append('name', document.getElementById('studentName').value);
-    formData.append('birthDate', document.getElementById('studentDOB').value);
-    formData.append('score', `${correctCount}/${questions.length}`);
-    formData.append('status', status);
-    formData.append('viPham', cheatCount);
-    formData.append('ngheName', ngheFinal); // Gửi tên nghề đã kèm chữ ÔN TẬP nếu có
+    const scoreCircle = document.querySelector('.score-circle');
+    const badge = document.getElementById('res-badge');
 
-    try {
-        await fetch(WEB_APP_URL, {
-            method: "POST",
-            mode: "no-cors",
-            body: formData
-        });
-    } catch (e) {
-        console.error("Lỗi gửi dữ liệu:", e);
+    if (score10 >= 8.3) {
+        scoreCircle.className = 'score-circle score-digital-pass';
+        badge.style.backgroundColor = "#28a745";
+    } else {
+        scoreCircle.className = 'score-circle score-digital-fail';
+        badge.style.backgroundColor = "#dc3545";
     }
 
-    // Đếm ngược tự động tải lại trang
+    badge.innerText = score10 + " ĐIỂM";
+    document.getElementById('result-screen').style.display = 'flex';
+
+    // Gửi dữ liệu về Google Sheets
+    const formData = new URLSearchParams();
+    formData.append('maThi', document.getElementById('maThi').value.trim());
+    formData.append('name', document.getElementById('studentName').value.toUpperCase());
+    formData.append('birthDate', document.getElementById('studentDOB').value);
+    formData.append('score', score10);
+    formData.append('status', status);
+
+    try { await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: formData }); } catch (e) {}
+
     let c = 15;
-    const cd = setInterval(() => {
-        if (c > 0) {
-            c--;
-            document.getElementById('countdown').innerText = c;
-        } else {
-            clearInterval(cd);
-            location.reload();
-        }
+    const cd = setInterval(() => { 
+        if(c > 0) { c--; document.getElementById('countdown').innerText = c; }
+        else { clearInterval(cd); location.reload(); }
     }, 1000);
 }
 
