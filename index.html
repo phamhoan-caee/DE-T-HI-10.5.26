@@ -264,7 +264,7 @@
 
 <script>
 const BASE_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTgusT-lc4tl11z_8YIgP1Vdt0R_mm95CMCEU91Ep_gskkQMTWpJTzJ44yKFl1QS5YHDL8ZO8JyGTjr/pub?output=csv&gid=";
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyFpuuH7ym2NPhO-LOVUO5dB4bdCK-o_iAMpTZdVWSITnQxx9ob_rURvdCV-iO4Q6VuPg/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzc4eC3hzqmNrPTa1VtajcdQ6vBRa5cgowBDGrKQkwCTvgUEUClVLX_8u2jukv1qFO48Q/exec";
 
 let allQuestions = [], selectedQuestions = [], studentAnswers = [];
 let currentQuestionIndex = 0, timeLeft = 1200, timerInterval, isSubmitted = false, cheatCount = 0;
@@ -441,8 +441,10 @@ async function finalizeSubmission() {
     document.getElementById('res-name').innerText = document.getElementById('studentName').value;
     document.getElementById('res-dob').innerText = document.getElementById('studentDOB').value || "---";
     document.getElementById('res-id').innerText = document.getElementById('khoaThi').value;
-    document.getElementById('res-score').innerText = correctCount;
-
+    formData.append('score', correctCount + "/30");
+    formData.append('status', status);
+    formData.append('viPham', cheatCount);
+    formData.append('ngheName', sNghe);
     const badge = document.getElementById('res-badge');
     badge.style.backgroundColor = score10 >= 8.3 ? "#28a745" : "#dc3545";
     badge.innerText = score10 + " ĐIỂM";
@@ -453,8 +455,10 @@ async function finalizeSubmission() {
     formData.append('name', document.getElementById('studentName').value.toUpperCase());
     formData.append('score', score10);
     formData.append('status', status);
-    try { await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: formData }); } catch (e) {}
-
+    try { await fetch(WEB_APP_URL, {
+        method: 'POST',
+        body: formData,
+        mode: 'no-cors' // Để tránh lỗi CORS khi gửi từ GitHub
     let c = 15;
     const cd = setInterval(() => { 
         if(c > 0) { c--; document.getElementById('countdown').innerText = c; }
